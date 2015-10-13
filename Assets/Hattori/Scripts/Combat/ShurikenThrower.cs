@@ -44,7 +44,7 @@ public class ShurikenThrower : MonoBehaviour {
 		}
 		shuriken = null;
 
-		Invoke ("SpawnShuriken", 1);
+		Invoke ("SpawnShuriken", 0.1f);
 	}
 
 	protected void SpawnShuriken() {
