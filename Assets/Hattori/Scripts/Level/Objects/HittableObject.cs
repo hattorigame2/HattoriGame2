@@ -11,8 +11,8 @@ public class HittableObject : MonoBehaviour {
 
 	public void Init() {
 		Vector3 newRotation = collider.gameObject.transform.eulerAngles;
-		newRotation.x = 90;
-		collider.gameObject.transform.eulerAngles = newRotation;
+		newRotation.x = -90;
+		collider.gameObject.transform.localEulerAngles = newRotation;
 
 		collider.owner = this;
 		collider.SetCollidersActive (true);

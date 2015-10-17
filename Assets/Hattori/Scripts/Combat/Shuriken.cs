@@ -4,8 +4,13 @@ using DG.Tweening;
 
 public class Shuriken : HittableObject {
 
+	public float minScale;
+	public Ease easeType;
+	public float rotateSpeed;
 
-
+	public Transform tiltX;
+	public Transform tiltY;
+	
 	public override void OnHit (HittableCollider other)
 	{
 //		Debug.Log ("Shuriken hit " + other);
@@ -23,11 +28,20 @@ public class Shuriken : HittableObject {
 		Destroy (gameObject, 0.5f);
 	}
 
-	public void Launch(Vector3 target, float time, float endScale, float rotateSpeed, Ease easeType, float amplitude = 1, float period = 0) {
-		transform.DOMove (target, time).SetEase (easeType, amplitude, period);
-		transform.DOScale (endScale, time).SetEase (easeType, amplitude, period);
+	public void Launch(Vector3 target, float speed, float tiltAngle, float yOffset) {
 
-		visual.transform.DORotate (new Vector3 (0, 0, 360), rotateSpeed, RotateMode.FastBeyond360).SetLoops (-1, LoopType.Restart);
+
+		float time = Vector3.Distance (transform.position, target) / speed;
+
+		transform.DOMove (target, time).SetEase (easeType);
+		transform.DOScale (minScale, time).SetEase (easeType);
+
+		Debug.Log ("Launch : " + target + " spd : " + speed + " tilt : " + tiltAngle + " yOffset : " + yOffset);
+		yOffset /= minScale;
+		visual.transform.DOLocalRotate (new Vector3 (0, 0, -360), rotateSpeed, RotateMode.FastBeyond360).SetLoops (-1, LoopType.Restart);
+		visual.transform.DOLocalMove(new Vector3(0, yOffset, 0), time).SetEase(easeType);
+		tiltY.DOLocalRotate (new Vector3 (0, tiltAngle, 0), time * 0.25f, RotateMode.Fast);
+
 		collider.SetCollidersActive (true);
 	}
 }

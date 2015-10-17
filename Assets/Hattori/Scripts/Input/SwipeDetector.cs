@@ -12,7 +12,18 @@ public class SwipeDetector : MonoBehaviour {
 
 	public Text errorText;
 
-	// Update is called once per frame
+	public float minDistance = 10f;
+	public float maxAngle = 35;
+	public float maxDeviation = 45;
+	public float maxDistance = 1f;
+	public float cutoffDuration = 0;
+	public float cutoffLength = 0;
+
+	public bool drawLine = false;
+	public bool simplifiedDraw = false;
+	public bool flyFromCenter = false;
+
+	
 	void Update () {
 		if (Input.GetMouseButtonDown (0)) {
 			if(points == null) {
@@ -24,46 +35,97 @@ public class SwipeDetector : MonoBehaviour {
 			points.Clear();
 
 			swipe.detector = this;
-			swipe.StartSwipe(Input.mousePosition);
+
+			if(IsPointWithinRange(Input.mousePosition)) {
+				swipe.StartSwipe(Input.mousePosition);
+			} else {
+				swipe.LogError("Out of range");
+			}
 			return;
 		} 
 
 		if (Input.GetMouseButton (0)) {
 			swipe.AddPoint(Input.mousePosition, Time.deltaTime);
+
+			if(cutoffLength > 0 && GetSwipeWorldLength(swipe) > cutoffLength) {
+				swipe.EndSwipe();
+			} else if(cutoffDuration > 0 && swipe.duration > cutoffDuration) {
+				swipe.EndSwipe();
+			}
+
 			return;
 		}
 
 		if (Input.GetMouseButtonUp (0)) {
-//			swipe.line.SetColors(Color.blue, Color.blue);
 			swipe.EndSwipe();
 			return;
 		}
 	}
 
-	public Vector3 ScreenToWorld(Vector3 screen) {
-		Vector3 world = screen;
-//		world.x = screen.x;
-//		world.z = screen.y;
-//		world.y = 0;
-		world = camera.ScreenToWorldPoint (world);
-		world.z = 0;
-//		screen.x = world.x;
-//		screen.y = world.z;
-//		screen.z = 0;
-		return world;
+	public void OnSwipeEnded(Swipe swipe) {
+		if (drawLine && !simplifiedDraw) {
+			DrawSwipe (swipe, Color.blue);
+		}
+		swipe.Simplify ();
+		if (drawLine && simplifiedDraw) {
+			DrawSwipe (swipe, Color.blue);
+		}
+		thrower.OnSwipeEnded (swipe.GetDeviationAngle () * swipe.GetDirection(), GetSwipeWorldLength(swipe), swipe.duration);
 	}
 
-	public Vector3 WorldToScreen(Vector3 world) {
-		Vector3 screen = world;
-		screen.z = 0;
-		screen = camera.WorldToScreenPoint (screen);
+
+	public float GetSwipeWorldLength(Swipe swipe) {
+//		Debug.Log (swipe.length);
+		return Vector3.Distance (ScreenToWorld (swipe.points [0]), ScreenToWorld (swipe.points [swipe.points.Count - 1]));
+	}
+
+
+	public bool IsPointWithinRange(Vector3 startPoint) {
+		Vector3 swipeWorld = ScreenToWorld (startPoint);
+		swipeWorld.y = thrower.transform.position.y;
+		float dist = Vector3.Distance (swipeWorld, thrower.transform.position);
+		return dist <= maxDistance;
+	}
+
+	public Vector3 ScreenToWorld(Vector3 screen) {
+		screen = camera.ScreenToWorldPoint (screen);
+		screen.y = 0;
 		return screen;
 	}
 
-	protected List<GameObject> points;
-	public void MakePoint(Vector3 position) {
-		points.Add(Instantiate (swipe.pointPrefab, position, Quaternion.identity) as GameObject);
+	public Vector3 WorldToScreen(Vector3 world) {
+		world.y = 0;
+		world = camera.WorldToScreenPoint (world);
+		return world;
 	}
+
+	protected List<GameObject> points;
+	public LineRenderer line;
+	public GameObject pointPrefab;
+
+	public void DrawSwipe(Swipe swipe, Color color) {
+		if (swipe.points == null || swipe.points.Count < 2) {
+			return;
+		}
+
+		for (int i = 0; i < points.Count; i++) {
+			Destroy(points[i]);	
+		}
+		points.Clear ();
+
+		line.SetVertexCount (swipe.points.Count);
+		for(int i = 0; i < swipe.points.Count; i++) {
+			line.SetPosition(i, ScreenToWorld(swipe.points[i]));
+			MakePoint(ScreenToWorld(swipe.points[i]));
+		}
+
+		line.SetColors (color, color);
+	}
+
+	public void MakePoint(Vector3 position) {
+		points.Add(Instantiate (pointPrefab, position, Quaternion.identity) as GameObject);
+	}
+
 }
 
 [System.Serializable]
@@ -71,48 +133,62 @@ public class Swipe {
 
 	public SwipeDetector detector;
 
-	protected List<Vector3> points;
-	protected Vector2 bottomPoint {
+	public List<Vector3> points { get; protected set; }
+	public float duration { get; protected set; }
+	public float speed {
 		get {
-			return detector.WorldToScreen(detector.thrower.transform.position);
+			return length / duration;
 		}
 	}
-	public float duration { get; protected set; }
+	
+	public float length {
+		get {
+			//			return Vector3.Distance (detector.ScreenToWorld (points [0]), detector.ScreenToWorld (points [points.Count - 1]));
+			return Vector2.Distance(points[0], points[points.Count - 1]);
+		}
+	}
 
-	public LineRenderer line;
-	public GameObject pointPrefab;
-	public float minDistance = 10f;
-	public float maxAngle = 35;
-	public float maxDeviation = 45;
-	public float maxDistancePercentage = 0.05f;
+
+
 
 	protected bool isActive = false;
-	public bool drawLine = false;
-	public bool simplifiedDraw = false;
-	public bool flyFromCenter = false;
+
+	public void StartSwipe(Vector3 point) {
+		if (points == null) {
+			points = new List<Vector3>();
+		}
+		points.Clear ();
+		duration = 0;
+		AddPoint (point, 0);
+		isActive = true;
+	}
+	
+	public void EndSwipe() {
+		if (!isActive) {
+			return;
+		}
+		
+		isActive = false;
+
+		detector.OnSwipeEnded (this);
+	}
 
 	public void AddPoint(Vector3 point, float deltaTime) {
 		if (!isActive) {
 			return;
 		}
 
-		if (points.Count == 0 || Vector3.Distance (point, points [points.Count - 1]) >= minDistance) {
+		if (points.Count == 0 || Vector3.Distance (point, points [points.Count - 1]) >= detector.minDistance) {
 			points.Add(point);
 			float angle = 0;
 			if (points.Count > 2) {
 				angle = GetAngleBetweenSegments(points[0], points[1], points[points.Count - 2], points[points.Count - 1]);
-			}
-
-			if(angle > maxAngle) {
-				points.RemoveAt(points.Count - 1);
-//				line.SetColors(Color.red, Color.red);
-//				Debug.Log("Stop");
-				EndSwipe();
+				if(angle > detector.maxAngle) {
+					points.RemoveAt(points.Count - 1);
+					EndSwipe();
+				}
 			}
 		}
-
-
-
 		duration += deltaTime;
 	}
 
@@ -122,85 +198,27 @@ public class Swipe {
 		return angle;
 	}
 
-	public void StartSwipe(Vector3 point) {
-
-		if (points == null) {
-			points = new List<Vector3>();
-		}
-		points.Clear ();
-		duration = 0;
-		AddPoint (point, 0);
-		isActive = true;
-	}
-
-	public void EndSwipe() {
-		if (!isActive) {
-			return;
-		}
-
-		if (flyFromCenter) {
-			points[0] = bottomPoint;
-		}
-
-		if (drawLine && !simplifiedDraw) {
-			line.SetColors (Color.blue, Color.blue);
-			DrawTrajectory ();
-		}
-
-		Simplify ();
-
-		if (isValid ()) {
-			line.SetColors (Color.green, Color.green);
-			float sign = points[points.Count - 1].x <= points[0].x ? -1 : 1;
-			detector.thrower.ThrowShurikenWithAngle(GetDeviationAngle() * sign);
-
-		} else {
-			line.SetColors (Color.red, Color.red);
-		}
-
-		if (drawLine && simplifiedDraw) {
-			DrawTrajectory ();
-		}
-
-		isActive = false;
-	}
-
-	// Test
-
-	protected void DrawTrajectory() {
-		line.SetVertexCount (points.Count);
-		for(int i = 0; i < points.Count; i++) {
-			line.SetPosition(i, detector.ScreenToWorld(points[i]));
-			detector.MakePoint(detector.ScreenToWorld(points[i]));
-		}
-	}
-
-	protected void Simplify() {
+	public void Simplify() {
 		while (this.points.Count > 2) {
 			points.RemoveAt(1);
 		}
 	}
 
-	protected float GetDeviationAngle() {
+	public float GetDeviationAngle() {
+		if(points == null || points.Count < 2) {
+			return 0;
+		}
+
 		float angle = Vector2.Angle ((points [points.Count - 1] - points [0]), Vector2.up);
 		return angle;
 	}
 
-	protected float GetStartPointDistance() {
-		if(points.Count > 0) {
-			return Mathf.Abs(points[0].x - bottomPoint.x);
-		}
-		return Mathf.Infinity;
-	}
-
-	protected float GetMaxDistance(float angle, float height) {
-		if (angle > 90 || height == 0) {
-			return Screen.width * maxDistancePercentage;
+	public float GetDirection() {
+		if(points == null || points.Count < 2) {
+			return 0;
 		}
 
-		float dist = Mathf.Atan (angle * Mathf.Deg2Rad) * height;
-//		Debug.Log ("H : " + height + " A: " + angle + " D: " + dist);
-		return dist;
+		return points [0].x <= points [points.Count - 1].x ? 1 : -1;
 	}
 
 	protected bool isValid() {
@@ -209,32 +227,12 @@ public class Swipe {
 			return false;
 		}
 
-		float angle = GetDeviationAngle ();
-
-		if (angle > maxDeviation) {
-			LogError("Angle too big");
-			return false;
-		}
-
-		if (GetStartPointDistance() > GetMaxDistance(maxDeviation, points[0].y)) {
-			LogError("Distance too big");
-			return false;
-		}
-
-//		float dir = points[points.Count - 1].x <= points[0].x ? -1 : 1;
-//		float sign = 
-//		if(Mathf.Sign(dir) != Mathf.Sign(points[0].x - this.bottomPoint.x)) {
-//			Debug.Log(dir + " | " + (points[0].x - this.bottomPoint.x));
-//			Debug.Log("Wrong direction");
-//			return false;
-//		}
-
 		LogError (string.Empty);
 
 		return true;
 	}
 
-	protected void LogError(string error) {
+	public void LogError(string error) {
 		detector.errorText.text = error;
 	}
 }

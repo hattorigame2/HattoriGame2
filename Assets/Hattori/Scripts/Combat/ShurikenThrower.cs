@@ -18,8 +18,7 @@ public class ShurikenThrower : MonoBehaviour {
 	public float easeAmplitude = 1;
 	public float easePeriod = 0;
 
-
-
+	public bool aimWithSpeed;
 
 	void Awake() {
 		initialPosition = transform.position;
@@ -28,19 +27,40 @@ public class ShurikenThrower : MonoBehaviour {
 
 	void Update() {
 		if (Input.GetKeyDown (KeyCode.T)) {
-			ThrowShuriken (beacon.position, minScale, flyTime);
+			ThrowShuriken (beacon.position, flyTime, 0, 0);
 		}
 	}
 
-	public void ThrowShurikenWithAngle(float angle) {
-		if (UpdateAimPosition (angle)) {
-			ThrowShuriken (beacon.position, minScale, flyTime);
+	public void OnSwipeEnded(float angle, float distance, float duration) {
+		Debug.Log ("Throw to " + angle + " dist : " + distance + " dur : " + duration + " spd : " + distance / duration);
+		float tiltAngle = GetTiltAngle (angle);
+		Vector2 offset = Vector2.zero;
+		float speed = distance / duration;
+		float speedValue = 1;
+		float speedPercentage = 0;
+
+		if (aimWithSpeed) {
+			offset = UpdateOffset (angle, speed);
+			speedPercentage = GetLengthPercentage (distance);
+		} else {
+			offset = UpdateOffset (angle, distance);
+			speedPercentage = GetSpeedPercentage (speed);
 		}
+
+		speedValue = GetSpeedValue (speedPercentage);
+//		Debug.Log (distance / duration);
+
+		ThrowShuriken (beacon.position, flyTime * speedValue, tiltAngle, offset.y);
 	}
 
-	public void ThrowShuriken(Vector3 destination, float scale, float time) {
+
+	public void ThrowShuriken(Vector3 destination, float speed, float tiltAngle, float yOffset) {
 		if (shuriken != null) {
-			shuriken.Launch (destination, time, scale, rotateSpeed, easeType, easeAmplitude, easePeriod);
+			shuriken.minScale = minScale;
+			shuriken.rotateSpeed = rotateSpeed;
+			shuriken.easeType = easeType;
+
+			shuriken.Launch (destination, speed, tiltAngle, yOffset);
 		}
 		shuriken = null;
 
@@ -55,20 +75,91 @@ public class ShurikenThrower : MonoBehaviour {
 		shuriken.collider.SetCollidersActive (false);
 	}
 
+	public Vector2 heightDataRange;
+	public Vector2 heightAngleRange;
+
+	public float GetLengthPercentage(float height) {
+		Debug.Log ("Length * " + height);
+		height = Mathf.Clamp (height, heightDataRange.x, heightDataRange.y);
+		Debug.Log ("Length ^ " + height);
+		
+		float percentage = (height - heightDataRange.x) / (heightDataRange.y - heightDataRange.x);
+		return percentage;
+	}
+
+	public float GetHeightOffset(float percentage) {
+		Debug.Log ("Height % " + percentage);
+		return heightAngleRange.x + (heightAngleRange.y - heightAngleRange.x) * percentage;
+	}
+
+	public Vector2 tiltDataRange;
+	public Vector2 tiltAngleRange;
+	
+	public float GetTiltAngle(float angle) {
+		float sign = Mathf.Sign (angle);
+		angle = Mathf.Clamp(Mathf.Abs (angle), tiltDataRange.x, tiltDataRange.y);
+		float percentage = (angle - tiltDataRange.x) / (tiltDataRange.y - tiltDataRange.x);
+		float tilt = (tiltAngleRange.x + (tiltAngleRange.y - tiltAngleRange.x) * percentage) * sign; 
+		return tilt;
+	}
+	
+	public Vector2 speedDataRange;
+	public Vector2 speedValueRange;
+
+	public float GetSpeedPercentage(float speed) {
+		Debug.Log ("SwipeSpeed * " + speed);
+		speed = Mathf.Clamp (speed, speedDataRange.x, speedDataRange.y);
+		Debug.Log ("SwipeSpeed ^ " + speed);
+		float percentage = (speed - speedDataRange.x) / (speedDataRange.y - speedDataRange.x);
+		return percentage;
+	}
+
+	public float GetSpeedValue(float percentage) {
+		Debug.Log ("Speed % " + percentage);
+		float value = (speedValueRange.x + (speedValueRange.y - speedValueRange.x) * percentage); 
+		return value;
+	}
 
 	public LayerMask borders;
-	public bool UpdateAimPosition(float angle) {
-		float wallDistance = 0;
-		RaycastHit hit;
-		if (Physics.Raycast (transform.position, Vector3.up, out hit, Mathf.Infinity, borders)) {
-			wallDistance = hit.distance;
-		} else {
-			Debug.LogError("No wall detected");
-			return false;
+
+	public Vector2 UpdateOffset(float angle, float heightData) {
+		RaycastHit hit = GetWallHit ();
+		float wallDistance = hit.distance;
+		if (wallDistance == 0) {
+			return Vector2.zero;
 		}
-	
-		float xOffset = Mathf.Atan (angle * Mathf.Deg2Rad) * wallDistance;
-		beacon.transform.position = hit.point + new Vector3 (xOffset, 0, 0);
-		return true;
+
+		Vector2 offset = new Vector2(GetOffsetX (angle, wallDistance), GetOffsetY (heightData));
+		UpdateAimPosition (hit.point, offset);
+
+		return offset;
+	}
+
+	public void UpdateAimPosition(Vector3 hitPoint, Vector2 offset) {
+		beacon.transform.position = hitPoint + new Vector3 (offset.x, offset.y, 0);
+	}
+
+	protected RaycastHit GetWallHit() {
+		RaycastHit hit;
+		if (!Physics.Raycast (transform.position, Vector3.forward, out hit, Mathf.Infinity, borders)) {
+			Debug.LogError("No wall detected");
+		} 
+//		Debug.DrawRay (transform.position, Vector3.forward * 2000, Color.white, 4);
+		return hit;
+	}
+
+	protected float GetOffsetX(float angle, float wallDistance) {
+		return Mathf.Atan (angle * Mathf.Deg2Rad) * wallDistance;
+	}
+
+	protected float GetOffsetY(float heightData) {
+		float percentage = 0;
+		if (aimWithSpeed) {
+			percentage = GetSpeedPercentage (heightData);
+		} else {
+			percentage = GetLengthPercentage(heightData);
+		}
+		heightData = GetHeightOffset (percentage);
+		return heightData;
 	}
 }
