@@ -36,7 +36,7 @@ public class Shuriken : HittableObject {
 		transform.DOMove (target, time).SetEase (easeType);
 		transform.DOScale (minScale, time).SetEase (easeType);
 
-		Debug.Log ("Launch : " + target + " spd : " + speed + " tilt : " + tiltAngle + " yOffset : " + yOffset);
+//		Debug.Log ("Launch : " + target + " spd : " + speed + " tilt : " + tiltAngle + " yOffset : " + yOffset);
 		yOffset /= minScale;
 		visual.transform.DOLocalRotate (new Vector3 (0, 0, -360), rotateSpeed, RotateMode.FastBeyond360).SetLoops (-1, LoopType.Restart);
 		visual.transform.DOLocalMove(new Vector3(0, yOffset, 0), time).SetEase(easeType);

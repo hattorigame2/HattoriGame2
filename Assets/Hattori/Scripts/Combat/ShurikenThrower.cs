@@ -4,13 +4,14 @@ using DG.Tweening;
 
 public class ShurikenThrower : MonoBehaviour {
 
-	protected Shuriken shuriken;
+	public Shuriken shuriken;
 	public GameObject shurikenPrefab;
 
 	protected Vector3 initialPosition;
 
 	public Transform beacon;
 	public float minScale = 0.2f;
+	public float maxScale = 1f;
 	public float flyTime = 1f;
 	public float rotateSpeed = 0.2f;
 
@@ -19,7 +20,7 @@ public class ShurikenThrower : MonoBehaviour {
 	public float easePeriod = 0;
 
 	public bool aimWithSpeed;
-
+	
 	void Awake() {
 		initialPosition = transform.position;
 		SpawnShuriken ();
@@ -31,11 +32,24 @@ public class ShurikenThrower : MonoBehaviour {
 		}
 	}
 
-	public void OnSwipeEnded(float angle, float distance, float duration) {
-		Debug.Log ("Throw to " + angle + " dist : " + distance + " dur : " + duration + " spd : " + distance / duration);
+	public void DragShuriken(Vector3 position) {
+		if (shuriken != null) {
+			shuriken.transform.position = position;
+		}
+	}
+
+	public void DropShuriken() {
+		if (shuriken != null) {
+			shuriken.collider.SetCollidersActive(false);
+			shuriken.transform.DOScale(Vector3.zero, 0.75f);
+			Destroy(shuriken, 1);
+		}
+	}
+
+	public void OnSwipeEnded(float angle, float distance, float duration, float speed) {
+//		Debug.Log ("Throw to " + angle + " dist : " + distance + " dur : " + duration + " spd : " + distance / duration);
 		float tiltAngle = GetTiltAngle (angle);
 		Vector2 offset = Vector2.zero;
-		float speed = distance / duration;
 		float speedValue = 1;
 		float speedPercentage = 0;
 
@@ -50,8 +64,14 @@ public class ShurikenThrower : MonoBehaviour {
 		speedValue = GetSpeedValue (speedPercentage);
 //		Debug.Log (distance / duration);
 
-		ThrowShuriken (beacon.position, flyTime * speedValue, tiltAngle, offset.y);
+		speed = Mathf.Clamp (speed, speedValueRange.x, speedValueRange.y);
+
+//		ThrowShuriken (beacon.position, flyTime * speedValue, tiltAngle, offset.y);
+		ThrowShuriken (beacon.position, speed, tiltAngle, 0);
+
 	}
+
+
 
 
 	public void ThrowShuriken(Vector3 destination, float speed, float tiltAngle, float yOffset) {
@@ -71,6 +91,7 @@ public class ShurikenThrower : MonoBehaviour {
 		if (shuriken == null) {
 			shuriken = (Instantiate(shurikenPrefab, transform.position, Quaternion.identity) as GameObject).GetComponent<Shuriken>(); 
 			shuriken.transform.parent = transform;
+			shuriken.transform.localScale = new Vector3(maxScale, shuriken.transform.localScale.y, maxScale);
 		}
 		shuriken.collider.SetCollidersActive (false);
 	}
@@ -79,16 +100,16 @@ public class ShurikenThrower : MonoBehaviour {
 	public Vector2 heightAngleRange;
 
 	public float GetLengthPercentage(float height) {
-		Debug.Log ("Length * " + height);
+//		Debug.Log ("Length * " + height);
 		height = Mathf.Clamp (height, heightDataRange.x, heightDataRange.y);
-		Debug.Log ("Length ^ " + height);
+//		Debug.Log ("Length ^ " + height);
 		
 		float percentage = (height - heightDataRange.x) / (heightDataRange.y - heightDataRange.x);
 		return percentage;
 	}
 
 	public float GetHeightOffset(float percentage) {
-		Debug.Log ("Height % " + percentage);
+//		Debug.Log ("Height % " + percentage);
 		return heightAngleRange.x + (heightAngleRange.y - heightAngleRange.x) * percentage;
 	}
 
@@ -107,15 +128,15 @@ public class ShurikenThrower : MonoBehaviour {
 	public Vector2 speedValueRange;
 
 	public float GetSpeedPercentage(float speed) {
-		Debug.Log ("SwipeSpeed * " + speed);
+//		Debug.Log ("SwipeSpeed * " + speed);
 		speed = Mathf.Clamp (speed, speedDataRange.x, speedDataRange.y);
-		Debug.Log ("SwipeSpeed ^ " + speed);
+//		Debug.Log ("SwipeSpeed ^ " + speed);
 		float percentage = (speed - speedDataRange.x) / (speedDataRange.y - speedDataRange.x);
 		return percentage;
 	}
 
 	public float GetSpeedValue(float percentage) {
-		Debug.Log ("Speed % " + percentage);
+//		Debug.Log ("Speed % " + percentage);
 		float value = (speedValueRange.x + (speedValueRange.y - speedValueRange.x) * percentage); 
 		return value;
 	}
@@ -141,7 +162,7 @@ public class ShurikenThrower : MonoBehaviour {
 
 	protected RaycastHit GetWallHit() {
 		RaycastHit hit;
-		if (!Physics.Raycast (transform.position, Vector3.forward, out hit, Mathf.Infinity, borders)) {
+		if (!Physics.Raycast (shuriken.transform.position, Vector3.forward, out hit, Mathf.Infinity, borders)) {
 			Debug.LogError("No wall detected");
 		} 
 //		Debug.DrawRay (transform.position, Vector3.forward * 2000, Color.white, 4);
