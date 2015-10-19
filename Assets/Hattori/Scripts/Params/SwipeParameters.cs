@@ -12,9 +12,6 @@ public class SwipeParameters : MonoBehaviour {
 	public Toggle swipeFromCenter;
 	public InputField maxSwipeTime;
 
-	public InputField controlAreaRadius;
-	public InputField controlAreaHeight;
-
 	public SwipeDetector detector;
 
 	void Awake() {
@@ -31,9 +28,6 @@ public class SwipeParameters : MonoBehaviour {
 		swipeFromCenter.isOn = detector.flyFromCenter;
 
 		maxSwipeTime.text = detector.cutoffDuration.ToString();
-		controlAreaHeight.text = (detector.heightTreshold - detector.thrower.transform.position.z).ToString();
-		controlAreaRadius.text = detector.maxDistance.ToString();
-
 	}
 
 	public void UpdateParameters() {
@@ -47,13 +41,6 @@ public class SwipeParameters : MonoBehaviour {
 		detector.flyFromCenter = swipeFromCenter.isOn;
 
 		float.TryParse (maxSwipeTime.text, out detector.cutoffDuration);
-
-		float height = 0;
-		float.TryParse (controlAreaHeight.text, out height);
-		detector.heightTreshold = detector.thrower.transform.position.z + height;
-
-		float.TryParse (controlAreaRadius.text, out detector.maxDistance);
-
 	}
 
 	public GameObject panel;

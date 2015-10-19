@@ -5,7 +5,6 @@ using System.Collections;
 public class ShurikenParameters : MonoBehaviour {
 
 	public InputField minScale;
-	public InputField maxScale;
 	public InputField flyTime;
 	public InputField rotateSpeed;
 
@@ -38,14 +37,12 @@ public class ShurikenParameters : MonoBehaviour {
 
 	public InputField maxTiltAngle;
 
-
 	void Awake() {
 		GetParameters ();
 	}
 	
 	public void GetParameters() {
 		minScale.text = thrower.minScale.ToString();
-		maxScale.text = thrower.maxScale.ToString();
 		flyTime.text = thrower.flyTime.ToString();
 		rotateSpeed.text = thrower.rotateSpeed.ToString();
 
@@ -78,8 +75,6 @@ public class ShurikenParameters : MonoBehaviour {
 	public void UpdateParameters() {
 		
 		float.TryParse (minScale.text, out thrower.minScale);
-		float.TryParse (maxScale.text, out thrower.maxScale);
-
 		float.TryParse (flyTime.text, out thrower.flyTime);
 		float.TryParse (rotateSpeed.text, out thrower.rotateSpeed);
 
