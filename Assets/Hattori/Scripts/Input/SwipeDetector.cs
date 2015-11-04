@@ -23,7 +23,10 @@ public class SwipeDetector : MonoBehaviour {
 	public bool simplifiedDraw = false;
 	public bool flyFromCenter = false;
 
-	
+	public float speedKoef;
+
+	public float borderY;
+
 	void Update () {
 		if (Input.GetMouseButtonDown (0)) {
 			if(points == null) {
@@ -47,9 +50,26 @@ public class SwipeDetector : MonoBehaviour {
 		if (Input.GetMouseButton (0)) {
 			swipe.AddPoint(Input.mousePosition, Time.deltaTime);
 
-			if(cutoffLength > 0 && GetSwipeWorldLength(swipe) > cutoffLength) {
-				swipe.EndSwipe();
-			} else if(cutoffDuration > 0 && swipe.duration > cutoffDuration) {
+//			if(cutoffLength > 0 && GetSwipeWorldLength(swipe) > cutoffLength) {
+////				Debug.Log("Cutoff length");
+//				swipe.EndSwipe();
+//			} else if(cutoffDuration > 0 && swipe.duration > cutoffDuration) {
+////				Debug.Log("Cutoff duration");
+//				swipe.EndSwipe();
+//			}
+			Vector3 lastPoint = ScreenToWorld(swipe.points[swipe.points.Count - 1]);
+			float dist = lastPoint.z - (thrower.transform.position.z);
+
+			if(dist < borderY) {
+				if(swipe.points.Count >= 2) {
+
+				
+//				Debug.Log(dist + " " + borderY);
+					float percentage = dist / borderY;
+//				Debug.Log(percentage);
+					thrower.shuriken.UpdateShurikenLaunch(percentage);
+				}
+			} else {
 				swipe.EndSwipe();
 			}
 
@@ -61,6 +81,10 @@ public class SwipeDetector : MonoBehaviour {
 			return;
 		}
 	}
+
+//	public void OnShurikenArrived() {
+//		swipe.EndSwipe ();
+//	}
 
 	public void OnSwipeEnded(Swipe swipe) {
 		if (drawLine && !simplifiedDraw) {
@@ -181,13 +205,21 @@ public class Swipe {
 		if (points.Count == 0 || Vector3.Distance (point, points [points.Count - 1]) >= detector.minDistance) {
 			points.Add(point);
 			float angle = 0;
-			if (points.Count > 2) {
-				angle = GetAngleBetweenSegments(points[0], points[1], points[points.Count - 2], points[points.Count - 1]);
-				if(angle > detector.maxAngle) {
-					points.RemoveAt(points.Count - 1);
-					EndSwipe();
-				}
-			}
+//			if (points.Count > 2) {
+//				angle = GetAngleBetweenSegments(points[0], points[1], points[points.Count - 2], points[points.Count - 1]);
+//				if(angle > detector.maxAngle) {
+//					points.RemoveAt(points.Count - 1);
+//					EndSwipe();
+//				}
+//			}
+//			if(points.Count == 2) {
+//				float spd = speed;
+//				spd = (1f / spd) * detector.speedKoef;
+//				LogError(speed + " -> " + spd.ToString());
+//				detector.thrower.lpSpeed = spd;
+//				detector.thrower.shuriken.lpSpeed = spd;
+//				detector.thrower.shuriken.MoveToLaunchPoint(detector);
+//			}
 		}
 		duration += deltaTime;
 	}

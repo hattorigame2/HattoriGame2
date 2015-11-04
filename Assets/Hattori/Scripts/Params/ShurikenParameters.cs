@@ -79,22 +79,22 @@ public class ShurikenParameters : MonoBehaviour {
 		float.TryParse (rotateSpeed.text, out thrower.rotateSpeed);
 
 		if (expEase.isOn) {
-			thrower.easeType = DG.Tweening.Ease.OutExpo;
+			thrower.easeType = DG.Tweening.Ease.InExpo;
 		}
 		if (sineEase.isOn) {
-			thrower.easeType = DG.Tweening.Ease.OutSine;
+			thrower.easeType = DG.Tweening.Ease.InSine;
 		}
 		if (linearEase.isOn) {
 			thrower.easeType = DG.Tweening.Ease.Linear;
 		}
 		if (quadEase.isOn) {
-			thrower.easeType = DG.Tweening.Ease.OutQuad;
+			thrower.easeType = DG.Tweening.Ease.InQuad;
 		}
 		if (cubeEase.isOn) {
-			thrower.easeType = DG.Tweening.Ease.OutCubic;
+			thrower.easeType = DG.Tweening.Ease.InCubic;
 		}
 		if (quartEase.isOn) {
-			thrower.easeType = DG.Tweening.Ease.OutQuart;
+			thrower.easeType = DG.Tweening.Ease.InQuart;
 		}
 
 

@@ -4,7 +4,7 @@ using DG.Tweening;
 
 public class ShurikenThrower : MonoBehaviour {
 
-	protected Shuriken shuriken;
+	public Shuriken shuriken;
 	public GameObject shurikenPrefab;
 
 	protected Vector3 initialPosition;
@@ -18,6 +18,8 @@ public class ShurikenThrower : MonoBehaviour {
 	public float easeAmplitude = 1;
 	public float easePeriod = 0;
 
+	public Vector3 shurikenPosition;
+
 	public bool aimWithSpeed;
 
 	void Awake() {
@@ -29,6 +31,21 @@ public class ShurikenThrower : MonoBehaviour {
 		if (Input.GetKeyDown (KeyCode.T)) {
 			ThrowShuriken (beacon.position, flyTime, 0, 0);
 		}
+
+		if (Input.GetKeyDown (KeyCode.R)) {
+			shuriken.transform.position = transform.position + shurikenPosition;
+			shuriken.visual.transform.localScale = Vector3.one * 0.8f;
+			shuriken.tiltX.transform.localEulerAngles = new Vector3(90, 0, 0);
+			shuriken.visual.transform.localEulerAngles = Vector3.zero;
+		}
+
+//		if (Input.GetKeyDown (KeyCode.L)) {
+//			shuriken.MoveToLaunchPoint (this);
+//		}
+	}
+
+	public void ForceLaunchShuriken() {
+		ThrowShuriken (beacon.position, flyTime, 0, 0);
 	}
 
 	public void OnSwipeEnded(float angle, float distance, float duration) {
@@ -69,8 +86,16 @@ public class ShurikenThrower : MonoBehaviour {
 
 	protected void SpawnShuriken() {
 		if (shuriken == null) {
-			shuriken = (Instantiate(shurikenPrefab, transform.position, Quaternion.identity) as GameObject).GetComponent<Shuriken>(); 
+			shuriken = (Instantiate(shurikenPrefab, transform.position + shurikenPosition, Quaternion.identity) as GameObject).GetComponent<Shuriken>(); 
 			shuriken.transform.parent = transform;
+
+			shuriken.launchPoint = launchPoint;
+			shuriken.lpSpeed = lpSpeed;
+			shuriken.lpAngle = lpAngle;
+			shuriken.lpScale = lpScale;
+			shuriken.lpEase = lpEase;
+			shuriken.lpRotAngle = lpRotAngle;
+			shuriken.lpScaleDecrease = lpScaleDecrease;
 		}
 		shuriken.collider.SetCollidersActive (false);
 	}
@@ -162,4 +187,12 @@ public class ShurikenThrower : MonoBehaviour {
 		heightData = GetHeightOffset (percentage);
 		return heightData;
 	}
+
+	public Transform launchPoint;
+	public float lpSpeed;
+	public float lpAngle;
+	public float lpScale;
+	public Ease lpEase;
+	public float lpRotAngle;
+	public float lpScaleDecrease;
 }

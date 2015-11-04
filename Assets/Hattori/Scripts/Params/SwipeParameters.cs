@@ -11,6 +11,9 @@ public class SwipeParameters : MonoBehaviour {
 	public Toggle simplifiedDraw;
 	public Toggle swipeFromCenter;
 	public InputField maxSwipeTime;
+	public InputField maxSwipeLength;
+	public InputField speedKoef;
+	public InputField borderY;
 
 	public SwipeDetector detector;
 
@@ -28,6 +31,9 @@ public class SwipeParameters : MonoBehaviour {
 		swipeFromCenter.isOn = detector.flyFromCenter;
 
 		maxSwipeTime.text = detector.cutoffDuration.ToString();
+		maxSwipeLength.text = detector.cutoffLength.ToString();
+		speedKoef.text = detector.speedKoef.ToString ();
+		borderY.text = detector.borderY.ToString ();
 	}
 
 	public void UpdateParameters() {
@@ -41,6 +47,9 @@ public class SwipeParameters : MonoBehaviour {
 		detector.flyFromCenter = swipeFromCenter.isOn;
 
 		float.TryParse (maxSwipeTime.text, out detector.cutoffDuration);
+		float.TryParse (maxSwipeLength.text, out detector.cutoffLength);
+		float.TryParse (speedKoef.text, out detector.speedKoef);
+		float.TryParse (borderY.text, out detector.borderY);
 	}
 
 	public GameObject panel;
